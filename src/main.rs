@@ -1,16 +1,16 @@
-use crate::api::ApiUrls;
+use crate::enums::{ApiUrls, SubCommand};
 use crate::models::{
     TimeEntry, TimeularActivitiesResponse, TimeularEntriesResponse, TimeularLoginResponse,
 };
-use chrono::{Duration, NaiveDate};
-use clap::{App, Arg};
+use chrono::NaiveDate;
+use clap::App;
 use log::info;
 use serde_json::json;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::env;
 
-mod api;
 mod console;
+mod enums;
 mod models;
 
 #[tokio::main]
@@ -22,53 +22,82 @@ async fn main() -> Result<(), reqwest::Error> {
         .version("0.1")
         .author("Martin Kireew <martin@techstudio.dev>")
         .about("Get data from Timeular and summarize it")
-        .arg(
-            Arg::new("INPUT")
-                .about("Sets the input file to use")
-                .required(true)
-                .index(1),
+        // .arg(
+        //     Arg::new("INPUT")
+        //         .about("Sets the input file to use")
+        //         .required(true)
+        //         .index(1),
+        // )
+        .subcommand(
+            App::new(SubCommand::Entries.value())
+                .about("Shows all entries from the a period of time."), // .arg("-l, --list 'lists test values'"),
+        )
+        .subcommand(
+            App::new(SubCommand::Summary.value())
+                .about("Summarizes the entries from a period of time."), // .arg("-l, --list 'lists test values'"),
         )
         .get_matches();
 
     let web_client = reqwest::Client::new();
     let timeular_token = get_timeular_token(&web_client).await?;
 
-    let mut hashmap: BTreeMap<NaiveDate, i64> = BTreeMap::new();
-
     let mut entries = get_timeular_data(&web_client, timeular_token).await?;
 
     entries.sort();
+
+    // You can check the value provided by positional arguments, or option arguments
+    // if let Some(i) = matches.value_of("INPUT") {
+    //     info!("Value for input: {}", i);
+    // }
+
+    if matches
+        .subcommand_matches(SubCommand::Entries.value())
+        .is_some()
+    {
+        execute_subcommand_entries(&entries);
+    }
+
+    if matches
+        .subcommand_matches(SubCommand::Summary.value())
+        .is_some()
+    {
+        execute_subcommand_summary(&entries);
+    }
+
+    Ok(())
+}
+
+fn execute_subcommand_entries(entries: &[TimeEntry]) {
+    info!(
+        "{0: >10} | {1: >10} | {2: >8} | {3: >8}",
+        "Date", "Activity", "Hours", "Minutes"
+    );
     entries.iter().for_each(|activity| {
-        let existing_value = hashmap.get(&activity.date);
-        hashmap.insert(
-            activity.date,
-            existing_value.unwrap_or(&0) + activity.duration.num_minutes(),
-        );
         info!(
-            "{} | {} | {}h | {}m",
+            "{0: <10} | {1: >10} | {2: >7}h | {3: >7}m",
             activity.date,
             activity.activity,
             activity.duration.num_hours(),
             activity.duration.num_minutes() - activity.duration.num_hours() * 60
         );
     });
+}
 
+fn execute_subcommand_summary(entries: &[TimeEntry]) {
+    let mut hashmap: BTreeMap<NaiveDate, i64> = BTreeMap::new();
+    info!("{0: >10} | {1: >8} | {2: >8}", "Date", "Hours", "Minutes");
+    entries.iter().for_each(|activity| {
+        let existing_value = hashmap.get(&activity.date).cloned();
+        hashmap.insert(
+            activity.date,
+            existing_value.unwrap_or(0) + activity.duration.num_minutes(),
+        );
+    });
     hashmap.iter().for_each(|(key, value)| {
         let hours = value / 60;
         let minutes = value - hours * 60;
-        info!("{} - {}h {}m", key, hours, minutes);
+        info!("{0: <10} | {1: >7}h | {2: >7}m", key, hours, minutes);
     });
-
-    // You can check the value provided by positional arguments, or option arguments
-    if let Some(i) = matches.value_of("INPUT") {
-        info!("Value for input: {}", i);
-    }
-
-    // if let Some(c) = matches.value_of("config") {
-    //     println!("Value for config: {}", c);
-    // }
-
-    Ok(())
 }
 
 async fn get_timeular_token(web_client: &reqwest::Client) -> Result<String, reqwest::Error> {
