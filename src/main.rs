@@ -1,9 +1,10 @@
-use crate::enums::{ApiUrls, SubCommand};
+use crate::enums::{is_valid_month, ApiUrls, SubCommand};
 use crate::models::{
-    TimeEntry, TimeularActivitiesResponse, TimeularEntriesResponse, TimeularLoginResponse,
+    TimeEntry, TimeularActivitiesResponse, TimeularActivity, TimeularEntriesResponse,
+    TimeularLoginResponse,
 };
 use chrono::NaiveDate;
-use clap::App;
+use clap::{App, Arg};
 use log::info;
 use serde_json::json;
 use std::collections::BTreeMap;
@@ -18,6 +19,8 @@ async fn main() -> Result<(), reqwest::Error> {
     log::set_logger(&console::CONSOLE_LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
 
+    let summary_flag = SubCommand::Summary.flag();
+
     let matches = App::new("Timeular CLI")
         .version("0.1")
         .author("Martin Kireew <martin@techstudio.dev>")
@@ -30,25 +33,28 @@ async fn main() -> Result<(), reqwest::Error> {
         // )
         .subcommand(
             App::new(SubCommand::Entries.value())
-                .about("Shows all entries from the a period of time."), // .arg("-l, --list 'lists test values'"),
+                .about("Shows all entries from the a period of time."),
         )
         .subcommand(
             App::new(SubCommand::Summary.value())
-                .about("Summarizes the entries from a period of time."), // .arg("-l, --list 'lists test values'"),
+                .about("Summarizes the entries from a period of time.")
+                .arg(
+                    Arg::new(summary_flag.long)
+                        .short(summary_flag.short)
+                        .about(summary_flag.about)
+                        .takes_value(summary_flag.takes_value)
+                        .validator(is_valid_month),
+                ),
         )
         .get_matches();
 
     let web_client = reqwest::Client::new();
     let timeular_token = get_timeular_token(&web_client).await?;
 
-    let mut entries = get_timeular_data(&web_client, timeular_token).await?;
+    let activities = get_timeular_activities(&web_client, &timeular_token).await?;
+    let mut entries = get_timeular_entries(&web_client, &timeular_token, activities).await?;
 
     entries.sort();
-
-    // You can check the value provided by positional arguments, or option arguments
-    // if let Some(i) = matches.value_of("INPUT") {
-    //     info!("Value for input: {}", i);
-    // }
 
     if matches
         .subcommand_matches(SubCommand::Entries.value())
@@ -57,10 +63,11 @@ async fn main() -> Result<(), reqwest::Error> {
         execute_subcommand_entries(&entries);
     }
 
-    if matches
-        .subcommand_matches(SubCommand::Summary.value())
-        .is_some()
-    {
+    if let Some(ref matches) = matches.subcommand_matches(SubCommand::Summary.value()) {
+        if let Some(month) = matches.value_of(summary_flag.long) {
+            info!("Value for input: {}", month);
+        }
+
         execute_subcommand_summary(&entries);
     }
 
@@ -113,10 +120,10 @@ async fn get_timeular_token(web_client: &reqwest::Client) -> Result<String, reqw
     Ok(result.json::<TimeularLoginResponse>().await?.token)
 }
 
-async fn get_timeular_data(
+async fn get_timeular_activities(
     web_client: &reqwest::Client,
-    token: String,
-) -> Result<Vec<TimeEntry>, reqwest::Error> {
+    token: &str,
+) -> Result<Vec<TimeularActivity>, reqwest::Error> {
     let timeular_activities = web_client
         .get(ApiUrls::GetAllActivities.value())
         .header("Authorization", format!("Bearer {}", token))
@@ -130,6 +137,14 @@ async fn get_timeular_data(
         timeular_activities.activities.len()
     );
 
+    Ok(timeular_activities.activities)
+}
+
+async fn get_timeular_entries(
+    web_client: &reqwest::Client,
+    token: &str,
+    activities: Vec<TimeularActivity>,
+) -> Result<Vec<TimeEntry>, reqwest::Error> {
     let timeular_entries = web_client
         .get(ApiUrls::GetAllEntries.value())
         .header("Authorization", format!("Bearer {}", token))
@@ -140,12 +155,19 @@ async fn get_timeular_data(
 
     info!("{} entries found", timeular_entries.time_entries.len());
 
+    let entries = convert_timeular_entries_to_time_entries(activities, timeular_entries);
+    Ok(entries)
+}
+
+fn convert_timeular_entries_to_time_entries(
+    activities: Vec<TimeularActivity>,
+    timeular_entries: TimeularEntriesResponse,
+) -> Vec<TimeEntry> {
     let map = timeular_entries
         .time_entries
         .iter()
         .map(|timeular_entry| {
-            let activity = timeular_activities
-                .activities
+            let activity = activities
                 .iter()
                 .find(|activity| activity.id == timeular_entry.activity_id);
 
@@ -164,5 +186,5 @@ async fn get_timeular_data(
             }
         })
         .collect();
-    Ok(map)
+    map
 }

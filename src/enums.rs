@@ -14,6 +14,13 @@ impl ApiUrls {
     }
 }
 
+pub struct Flag<'a> {
+    pub short: char,
+    pub long: &'a str,
+    pub about: &'a str,
+    pub takes_value: bool,
+}
+
 pub enum SubCommand {
     Entries,
     Summary,
@@ -25,5 +32,32 @@ impl SubCommand {
             SubCommand::Entries => "entries",
             SubCommand::Summary => "summary",
         }
+    }
+
+    pub fn flag(&self) -> Flag {
+        match *self {
+            SubCommand::Summary => Flag {
+                short: 'm',
+                long: "month",
+                about: "set the month for the entries",
+                takes_value: true,
+            },
+            _ => Flag {
+                short: '0',
+                long: "",
+                about: "",
+                takes_value: false,
+            },
+        }
+    }
+}
+
+pub fn is_valid_month(month: &str) -> Result<(), String> {
+    match month {
+        "jan" | "feb" | "mar" | "may" | "apr" | "jun" | "jul" | "aug" | "sep" | "okt" | "nov"
+        | "dec" => Ok(()),
+        &_ => Err("Only these values are valid months. \
+        (jan, feb, mar, apr, may, jun, jul, aug, sep, okt, nov, dec)"
+            .to_string()),
     }
 }
