@@ -52,26 +52,52 @@ async fn main() -> Result<(), reqwest::Error> {
     let timeular_token = get_timeular_token(&web_client).await?;
 
     let activities = get_timeular_activities(&web_client, &timeular_token).await?;
-    let mut entries = get_timeular_entries(&web_client, &timeular_token, activities).await?;
-
-    entries.sort();
 
     if matches
         .subcommand_matches(SubCommand::Entries.value())
         .is_some()
     {
+        let (start, end) = get_dates("feb");
+        info!("{} {}", start, end);
+        let mut entries =
+            get_timeular_entries(&web_client, &timeular_token, &activities, "01-01", "12-31")
+                .await?;
+
+        entries.sort();
         execute_subcommand_entries(&entries);
     }
 
     if let Some(ref matches) = matches.subcommand_matches(SubCommand::Summary.value()) {
         if let Some(month) = matches.value_of(summary_flag.long) {
             info!("Value for input: {}", month);
-        }
+            let (start, end) = get_dates(month);
+            info!("{} {}", start, end);
+            let entries =
+                get_timeular_entries(&web_client, &timeular_token, &activities, start, end).await?;
 
-        execute_subcommand_summary(&entries);
+            execute_subcommand_summary(&entries);
+        }
     }
 
     Ok(())
+}
+
+fn get_dates(month: &str) -> (&str, &str) {
+    match month {
+        "jan" => ("01-01", "01-31"),
+        "feb" => ("02-01", "02-28"),
+        "mar" => ("03-01", "03-31"),
+        "apr" => ("04-01", "04-30"),
+        "may" => ("05-01", "05-31"),
+        "jun" => ("06-01", "06-30"),
+        "jul" => ("07-01", "07-31"),
+        "aug" => ("08-01", "08-31"),
+        "sep" => ("09-01", "09-30"),
+        "okt" => ("10-01", "10-31"),
+        "nov" => ("11-01", "11-30"),
+        "dec" => ("12-01", "12-31"),
+        &_ => ("", ""),
+    }
 }
 
 fn execute_subcommand_entries(entries: &[TimeEntry]) {
@@ -143,10 +169,14 @@ async fn get_timeular_activities(
 async fn get_timeular_entries(
     web_client: &reqwest::Client,
     token: &str,
-    activities: Vec<TimeularActivity>,
+    activities: &[TimeularActivity],
+    start: &str,
+    end: &str,
 ) -> Result<Vec<TimeEntry>, reqwest::Error> {
+    let string = ApiUrls::GetAllEntries(start.to_string(), end.to_string()).value();
+    info!("{}", string);
     let timeular_entries = web_client
-        .get(ApiUrls::GetAllEntries.value())
+        .get(string)
         .header("Authorization", format!("Bearer {}", token))
         .send()
         .await?
@@ -155,12 +185,12 @@ async fn get_timeular_entries(
 
     info!("{} entries found", timeular_entries.time_entries.len());
 
-    let entries = convert_timeular_entries_to_time_entries(activities, timeular_entries);
+    let entries = convert_timeular_entries_to_time_entries(&activities, timeular_entries);
     Ok(entries)
 }
 
 fn convert_timeular_entries_to_time_entries(
-    activities: Vec<TimeularActivity>,
+    activities: &[TimeularActivity],
     timeular_entries: TimeularEntriesResponse,
 ) -> Vec<TimeEntry> {
     let map = timeular_entries

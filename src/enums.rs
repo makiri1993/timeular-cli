@@ -1,15 +1,21 @@
 pub enum ApiUrls {
     Login,
     GetAllActivities,
-    GetAllEntries,
+    GetAllEntries(String, String),
 }
 
 impl ApiUrls {
-    pub fn value(&self) -> &str {
-        match *self {
-            ApiUrls::GetAllActivities => "https://api.timeular.com/api/v3/activities",
-            ApiUrls::Login => "https://api.timeular.com/api/v3/developer/sign-in",
-            ApiUrls::GetAllEntries => "https://api.timeular.com/api/v3/time-entries/2021-03-01T00:00:00.000/2021-03-31T23:59:59.999"
+    pub fn value(&self) -> String {
+        match &*self {
+            ApiUrls::GetAllActivities => "https://api.timeular.com/api/v3/activities".to_string(),
+            ApiUrls::Login => "https://api.timeular.com/api/v3/developer/sign-in".to_string(),
+            ApiUrls::GetAllEntries(start, end) => {
+                format!(
+                    "https://api.timeular.com/api/v3/time-entries\
+                        /2021-{}T00:00:00.000/2021-{}T23:59:59.999",
+                    start, end
+                )
+            }
         }
     }
 }
