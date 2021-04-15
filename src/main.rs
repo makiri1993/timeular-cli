@@ -117,20 +117,25 @@ fn execute_subcommand_entries(entries: &[TimeEntry]) {
 }
 
 fn execute_subcommand_summary(entries: &[TimeEntry]) {
-    let mut hashmap: BTreeMap<NaiveDate, i64> = BTreeMap::new();
-    info!("{0: >10} | {1: >8} | {2: >8}", "Date", "Hours", "Minutes");
+    let mut tree_map: BTreeMap<NaiveDate, i64> = BTreeMap::new();
+    let mut sum_hours = 0.0;
+    println!("{0: >10} | {1: >8} | {2: >8}", "Date", "Hours", "Minutes");
     entries.iter().for_each(|activity| {
-        let existing_value = hashmap.get(&activity.date).cloned();
-        hashmap.insert(
+        let existing_value = tree_map.get(&activity.date).cloned();
+        tree_map.insert(
             activity.date,
             existing_value.unwrap_or(0) + activity.duration.num_minutes(),
         );
     });
-    hashmap.iter().for_each(|(key, value)| {
+    tree_map.iter().for_each(|(key, value)| {
         let hours = value / 60;
         let minutes = value - hours * 60;
-        info!("{0: <10} | {1: >7}h | {2: >7}m", key, hours, minutes);
+        sum_hours += hours as f64 + minutes as f64 / 60.0;
+        println!("{0: <10} | {1: >7}h | {2: >7}m", key, hours, minutes);
     });
+    println!();
+    info!("You should have worked at least {}h", tree_map.len() * 8);
+    info!("You have worked {}h", sum_hours);
 }
 
 async fn get_timeular_token(web_client: &reqwest::Client) -> Result<String, reqwest::Error> {
