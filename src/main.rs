@@ -1,17 +1,17 @@
-use crate::enums::{is_valid_month, ApiUrls, SubCommand};
-use crate::models::{
-    TimeEntry, TimeularActivitiesResponse, TimeularActivity, TimeularEntriesResponse,
-    TimeularLoginResponse,
-};
+use std::collections::BTreeMap;
+
 use chrono::NaiveDate;
 use clap::{App, Arg};
 use log::info;
-use serde_json::json;
-use std::collections::BTreeMap;
-use std::env;
 
+use crate::enums::subcommand::SubCommand;
+use helper::input;
+use models::time;
+
+mod api;
 mod console;
 mod enums;
+mod helper;
 mod models;
 
 #[tokio::main]
@@ -43,64 +43,49 @@ async fn main() -> Result<(), reqwest::Error> {
                         .short(summary_flag.short)
                         .about(summary_flag.about)
                         .takes_value(summary_flag.takes_value)
-                        .validator(is_valid_month),
+                        .validator(input::is_valid_month),
                 ),
         )
         .get_matches();
 
     let web_client = reqwest::Client::new();
-    let timeular_token = get_timeular_token(&web_client).await?;
+    let timeular_token = api::get_timeular_token(&web_client).await?;
 
-    let activities = get_timeular_activities(&web_client, &timeular_token).await?;
+    let activities = api::get_timeular_activities(&web_client, &timeular_token).await?;
 
     if matches
         .subcommand_matches(SubCommand::Entries.value())
         .is_some()
     {
-        let (start, end) = get_dates("feb");
+        let (start, end) = input::convert_input_month_to_date_strings("feb");
         info!("{} {}", start, end);
         let mut entries =
-            get_timeular_entries(&web_client, &timeular_token, &activities, "01-01", "12-31")
+            api::get_timeular_entries(&web_client, &timeular_token, &activities, "01-01", "12-31")
                 .await?;
 
         entries.sort();
-        execute_subcommand_entries(&entries);
+        print_subcommand_entries(&entries);
     }
 
     if let Some(ref matches) = matches.subcommand_matches(SubCommand::Summary.value()) {
         if let Some(month) = matches.value_of(summary_flag.long) {
             info!("Value for input: {}", month);
-            let (start, end) = get_dates(month);
+            let (start, end) = input::convert_input_month_to_date_strings(month);
             info!("{} {}", start, end);
             let entries =
-                get_timeular_entries(&web_client, &timeular_token, &activities, start, end).await?;
+                api::get_timeular_entries(&web_client, &timeular_token, &activities, start, end)
+                    .await?;
 
-            execute_subcommand_summary(&entries);
+            let summarized_entries = time::summarize_entries_in_tree(&entries);
+
+            print_subcommand_summary(summarized_entries);
         }
     }
 
     Ok(())
 }
 
-fn get_dates(month: &str) -> (&str, &str) {
-    match month {
-        "jan" => ("01-01", "01-31"),
-        "feb" => ("02-01", "02-28"),
-        "mar" => ("03-01", "03-31"),
-        "apr" => ("04-01", "04-30"),
-        "may" => ("05-01", "05-31"),
-        "jun" => ("06-01", "06-30"),
-        "jul" => ("07-01", "07-31"),
-        "aug" => ("08-01", "08-31"),
-        "sep" => ("09-01", "09-30"),
-        "okt" => ("10-01", "10-31"),
-        "nov" => ("11-01", "11-30"),
-        "dec" => ("12-01", "12-31"),
-        &_ => ("", ""),
-    }
-}
-
-fn execute_subcommand_entries(entries: &[TimeEntry]) {
+fn print_subcommand_entries(entries: &[time::Entry]) {
     info!(
         "{0: >10} | {1: >10} | {2: >8} | {3: >8}",
         "Date", "Activity", "Hours", "Minutes"
@@ -116,110 +101,16 @@ fn execute_subcommand_entries(entries: &[TimeEntry]) {
     });
 }
 
-fn execute_subcommand_summary(entries: &[TimeEntry]) {
-    let mut tree_map: BTreeMap<NaiveDate, i64> = BTreeMap::new();
+fn print_subcommand_summary(entries: BTreeMap<NaiveDate, i64>) {
     let mut sum_hours = 0.0;
     println!("{0: >10} | {1: >8} | {2: >8}", "Date", "Hours", "Minutes");
-    entries.iter().for_each(|activity| {
-        let existing_value = tree_map.get(&activity.date).cloned();
-        tree_map.insert(
-            activity.date,
-            existing_value.unwrap_or(0) + activity.duration.num_minutes(),
-        );
-    });
-    tree_map.iter().for_each(|(key, value)| {
+    entries.iter().for_each(|(key, value)| {
         let hours = value / 60;
         let minutes = value - hours * 60;
         sum_hours += hours as f64 + minutes as f64 / 60.0;
         println!("{0: <10} | {1: >7}h | {2: >7}m", key, hours, minutes);
     });
     println!();
-    info!("You should have worked at least {}h", tree_map.len() * 8);
-    info!("You have worked {}h", sum_hours);
-}
-
-async fn get_timeular_token(web_client: &reqwest::Client) -> Result<String, reqwest::Error> {
-    let result = web_client
-        .post(ApiUrls::Login.value())
-        .json(&json!({
-            "apiKey": env::var("TIMEULAR_API_KEY").unwrap_or("No api key provided".to_string()),
-            "apiSecret": env::var("TIMEULAR_API_SECRET").unwrap_or("No api secret provided".to_string())
-        }))
-        .send()
-        .await?;
-
-    Ok(result.json::<TimeularLoginResponse>().await?.token)
-}
-
-async fn get_timeular_activities(
-    web_client: &reqwest::Client,
-    token: &str,
-) -> Result<Vec<TimeularActivity>, reqwest::Error> {
-    let timeular_activities = web_client
-        .get(ApiUrls::GetAllActivities.value())
-        .header("Authorization", format!("Bearer {}", token))
-        .send()
-        .await?
-        .json::<TimeularActivitiesResponse>()
-        .await?;
-
-    info!(
-        "{} activities fetched",
-        timeular_activities.activities.len()
-    );
-
-    Ok(timeular_activities.activities)
-}
-
-async fn get_timeular_entries(
-    web_client: &reqwest::Client,
-    token: &str,
-    activities: &[TimeularActivity],
-    start: &str,
-    end: &str,
-) -> Result<Vec<TimeEntry>, reqwest::Error> {
-    let string = ApiUrls::GetAllEntries(start.to_string(), end.to_string()).value();
-    info!("{}", string);
-    let timeular_entries = web_client
-        .get(string)
-        .header("Authorization", format!("Bearer {}", token))
-        .send()
-        .await?
-        .json::<TimeularEntriesResponse>()
-        .await?;
-
-    info!("{} entries found", timeular_entries.time_entries.len());
-
-    let entries = convert_timeular_entries_to_time_entries(&activities, timeular_entries);
-    Ok(entries)
-}
-
-fn convert_timeular_entries_to_time_entries(
-    activities: &[TimeularActivity],
-    timeular_entries: TimeularEntriesResponse,
-) -> Vec<TimeEntry> {
-    let map = timeular_entries
-        .time_entries
-        .iter()
-        .map(|timeular_entry| {
-            let activity = activities
-                .iter()
-                .find(|activity| activity.id == timeular_entry.activity_id);
-
-            let duration = timeular_entry
-                .duration
-                .stopped_at
-                .signed_duration_since(timeular_entry.duration.started_at);
-
-            TimeEntry {
-                activity: match activity {
-                    None => "❌".to_string(),
-                    Some(value) => value.name.clone(),
-                },
-                duration,
-                date: timeular_entry.duration.started_at.date(),
-            }
-        })
-        .collect();
-    map
+    info!("You should have worked at least {}h", entries.len() * 8);
+    info!("You have worked {:.2}h", sum_hours);
 }
