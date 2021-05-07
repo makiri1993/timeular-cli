@@ -4,8 +4,9 @@ use chrono::{Datelike, NaiveDate};
 use clap::{App, Arg};
 use log::info;
 
-use crate::enums::subcommand::SubCommand;
 use helper::input;
+use models::flag::Flags;
+use models::subcommand::SubCommands;
 use models::time;
 
 mod api;
@@ -19,8 +20,10 @@ async fn main() -> Result<(), reqwest::Error> {
     log::set_logger(&console::CONSOLE_LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
 
-    let summary_flag = SubCommand::Summary.flag();
+    let summary_flag = Flags::Month.value();
 
+    let subcommand_entries = SubCommands::Entries.value();
+    let subcommand_summary = SubCommands::Summary.value();
     let matches = App::new("Timeular CLI")
         .version("0.1")
         .author("Martin Kireew <martin@techstudio.dev>")
@@ -31,13 +34,10 @@ async fn main() -> Result<(), reqwest::Error> {
         //         .required(true)
         //         .index(1),
         // )
+        .subcommand(App::new(subcommand_entries.command).about(subcommand_entries.description))
         .subcommand(
-            App::new(SubCommand::Entries.value())
-                .about("Shows all entries from the a period of time."),
-        )
-        .subcommand(
-            App::new(SubCommand::Summary.value())
-                .about("Summarizes the entries from a period of time.")
+            App::new(subcommand_summary.command)
+                .about(subcommand_summary.description)
                 .arg(
                     Arg::new(summary_flag.long)
                         .short(summary_flag.short)
@@ -54,7 +54,7 @@ async fn main() -> Result<(), reqwest::Error> {
     let activities = api::get_timeular_activities(&web_client, &timeular_token).await?;
 
     if matches
-        .subcommand_matches(SubCommand::Entries.value())
+        .subcommand_matches(subcommand_entries.command)
         .is_some()
     {
         let (start, end) = input::convert_input_month_to_date_strings("feb");
@@ -67,7 +67,7 @@ async fn main() -> Result<(), reqwest::Error> {
         print_subcommand_entries(&entries);
     }
 
-    if let Some(ref matches) = matches.subcommand_matches(SubCommand::Summary.value()) {
+    if let Some(ref matches) = matches.subcommand_matches(subcommand_summary.command) {
         if let Some(month) = matches.value_of(summary_flag.long) {
             info!("Value for input: {}", month);
             let (start, end) = input::convert_input_month_to_date_strings(month);
