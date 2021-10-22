@@ -61,6 +61,6 @@ pub async fn get_timeular_entries(
 
     info!("{} entries found", timeular_entries.time_entries.len());
 
-    let entries = timeular::convert_timeular_entries_to_time_entries(&activities, timeular_entries);
+    let entries = timeular::convert_timeular_entries_to_time_entries(activities, timeular_entries);
     Ok(entries)
 }

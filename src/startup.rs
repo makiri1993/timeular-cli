@@ -22,6 +22,7 @@ pub async fn run() -> Result<(), reqwest::Error> {
     let client = reqwest::Client::new();
     let timeular_token = api::get_timeular_token(&configuration, &client).await?;
     let activities = api::get_timeular_activities(&client, &timeular_token).await?;
+
     match command {
         Command::Summary => {
             subcommand_summary(&flags, &client, &timeular_token, &activities).await?;
@@ -59,7 +60,7 @@ fn parse_flag(flag_key: Option<&String>, flag_value: Option<&String>) -> Flag {
     }
 }
 
-fn validate_month_flag(value: &String) -> Flag {
+fn validate_month_flag(value: &str) -> Flag {
     let is_valid_month = input::is_valid_month(value);
     match is_valid_month {
         true => (Flag::Month(value.to_owned())),
@@ -107,12 +108,12 @@ fn extract_command(args: &[String]) -> Command {
 // }
 
 async fn subcommand_summary(
-    flags: &Vec<Flag>,
+    flags: &[Flag],
     client: &reqwest::Client,
     timeular_token: &str,
     activities: &[models::timeular::Activity],
 ) -> Result<(), reqwest::Error> {
-    let month_flag = flags.into_iter().find(|flag| match flag {
+    let month_flag = flags.iter().find(|flag| match flag {
         Flag::Month(_) => true,
     });
     if let Some(Flag::Month(month)) = month_flag {
@@ -121,7 +122,7 @@ async fn subcommand_summary(
         let (start, end) = input::convert_input_month_to_date_strings(month);
         log::info!("{} {}", start, end);
         let entries =
-            api::get_timeular_entries(&client, &timeular_token, &activities, start, end).await?;
+            api::get_timeular_entries(client, timeular_token, activities, start, end).await?;
 
         let summarized_entries = models::time::summarize_entries_in_tree(&entries);
 
