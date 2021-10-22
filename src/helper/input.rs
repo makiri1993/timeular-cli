@@ -1,10 +1,8 @@
-pub fn is_valid_month(month: &str) -> Result<(), String> {
+pub fn is_valid_month(month: &str) -> bool {
     match month {
         "jan" | "feb" | "mar" | "may" | "apr" | "jun" | "jul" | "aug" | "sep" | "okt" | "nov"
-        | "dec" => Ok(()),
-        &_ => Err("Only these values are valid months. \
-        (jan, feb, mar, apr, may, jun, jul, aug, sep, okt, nov, dec)"
-            .to_string()),
+        | "dec" => true,
+        &_ => false,
     }
 }
 

@@ -1,15 +1,20 @@
-use crate::enums;
-use crate::models::{time, timeular};
+use crate::{
+    configuration::Settings,
+    enums,
+    models::{time, timeular},
+};
 use log::info;
 use serde_json::json;
-use std::env;
 
-pub async fn get_timeular_token(web_client: &reqwest::Client) -> Result<String, reqwest::Error> {
+pub async fn get_timeular_token(
+    configuration: &Settings,
+    web_client: &reqwest::Client,
+) -> Result<String, reqwest::Error> {
     let result = web_client
-        .post(enums::api::Urls::Login.value())
+        .post(enums::url::Url::Login.value())
         .json(&json!({
-            "apiKey": env::var("TIMEULAR_API_KEY").unwrap_or("No api key provided".to_string()),
-            "apiSecret": env::var("TIMEULAR_API_SECRET").unwrap_or("No api secret provided".to_string())
+            "apiKey": configuration.timeular_api_key,
+            "apiSecret": configuration.timeular_api_secret
         }))
         .send()
         .await?;
@@ -22,7 +27,7 @@ pub async fn get_timeular_activities(
     token: &str,
 ) -> Result<Vec<timeular::Activity>, reqwest::Error> {
     let timeular_activities = web_client
-        .get(enums::api::Urls::GetAllActivities.value())
+        .get(enums::url::Url::GetAllActivities.value())
         .header("Authorization", format!("Bearer {}", token))
         .send()
         .await?
@@ -44,7 +49,7 @@ pub async fn get_timeular_entries(
     start: &str,
     end: &str,
 ) -> Result<Vec<time::Entry>, reqwest::Error> {
-    let string = enums::api::Urls::GetAllEntries(start.to_string(), end.to_string()).value();
+    let string = enums::url::Url::GetAllEntries(start.to_string(), end.to_string()).value();
     info!("{}", string);
     let timeular_entries = web_client
         .get(string)
