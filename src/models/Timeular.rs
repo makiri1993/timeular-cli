@@ -68,32 +68,44 @@ struct EntryNoteMention {
     space_id: String,
 }
 
-pub fn convert_timeular_entries_to_time_entries(
-    activities: &[Activity],
-    timeular_entries: EntriesResponse,
-) -> Vec<time::Entry> {
-    let map = timeular_entries
-        .time_entries
-        .iter()
-        .map(|timeular_entry| {
-            let activity = activities
-                .iter()
-                .find(|activity| activity.id == timeular_entry.activity_id);
+pub trait Convert {
+    fn convert_timeular_entry_to_time_entry(&self, activities: &[Activity]) -> time::Entry;
+}
+pub trait ConvertForResponse {
+    fn convert_timeular_entries_to_time_entries(&self, activities: &[Activity])
+        -> Vec<time::Entry>;
+}
 
-            let duration = timeular_entry
-                .duration
-                .stopped_at
-                .signed_duration_since(timeular_entry.duration.started_at);
+impl Convert for Entry {
+    fn convert_timeular_entry_to_time_entry(&self, activities: &[Activity]) -> time::Entry {
+        let activity = activities
+            .iter()
+            .find(|activity| activity.id == self.activity_id);
 
-            time::Entry {
-                activity: match activity {
-                    None => "❌".to_string(),
-                    Some(value) => value.name.clone(),
-                },
-                duration,
-                date: timeular_entry.duration.started_at.date(),
-            }
-        })
-        .collect();
-    map
+        let duration = self
+            .duration
+            .stopped_at
+            .signed_duration_since(self.duration.started_at);
+
+        time::Entry {
+            activity: match activity {
+                None => "❌".to_string(),
+                Some(value) => value.name.clone(),
+            },
+            duration,
+            date: self.duration.started_at.date(),
+        }
+    }
+}
+
+impl ConvertForResponse for EntriesResponse {
+    fn convert_timeular_entries_to_time_entries(
+        &self,
+        activities: &[Activity],
+    ) -> Vec<time::Entry> {
+        self.time_entries
+            .iter()
+            .map(|timeular_entry| timeular_entry.convert_timeular_entry_to_time_entry(activities))
+            .collect()
+    }
 }

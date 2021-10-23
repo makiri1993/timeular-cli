@@ -1,14 +1,12 @@
 use crate::{
-    api,
+    api::TimeularService,
     configuration::get_configuration,
     enums::{command::Command, flag::Flag},
     helper::input,
-    models,
+    models::{print::PrettyPrint, time::Summarize},
 };
 
-use std::{collections::BTreeMap, env};
-
-use chrono::{Datelike, NaiveDate};
+use std::env;
 
 pub async fn run() -> Result<(), reqwest::Error> {
     let configuration = get_configuration().expect("Failed to read configuration.");
@@ -20,12 +18,17 @@ pub async fn run() -> Result<(), reqwest::Error> {
     log::info!("Flags: {:?}", flags);
 
     let client = reqwest::Client::new();
-    let timeular_token = api::get_timeular_token(&configuration, &client).await?;
-    let activities = api::get_timeular_activities(&client, &timeular_token).await?;
+
+    let timeular_service = TimeularService::new(
+        client,
+        &configuration.timeular_api_key,
+        &configuration.timeular_api_secret,
+    )
+    .await?;
 
     match command {
         Command::Summary => {
-            subcommand_summary(&flags, &client, &timeular_token, &activities).await?;
+            subcommand_summary(&flags, &timeular_service).await?;
         }
         Command::Entries => todo!(),
     }
@@ -109,9 +112,7 @@ fn extract_command(args: &[String]) -> Command {
 
 async fn subcommand_summary(
     flags: &[Flag],
-    client: &reqwest::Client,
-    timeular_token: &str,
-    activities: &[models::timeular::Activity],
+    timeular_service: &TimeularService,
 ) -> Result<(), reqwest::Error> {
     let month_flag = flags.iter().find(|flag| match flag {
         Flag::Month(_) => true,
@@ -121,12 +122,11 @@ async fn subcommand_summary(
         // log::info!("Value for dec: {:?}", matches.is_present("decimal"));
         let (start, end) = input::convert_input_month_to_date_strings(month);
         log::info!("{} {}", start, end);
-        let entries =
-            api::get_timeular_entries(client, timeular_token, activities, start, end).await?;
+        let entries = timeular_service.get_timeular_entries(start, end).await?;
 
-        let summarized_entries = models::time::summarize_entries_in_tree(&entries);
+        let summarized_entries = entries.summarize_entries_in_tree();
 
-        print_subcommand_summary(summarized_entries);
+        summarized_entries.print_subcommand_summary();
     }
     Ok(())
 }
@@ -164,40 +164,3 @@ async fn subcommand_summary(
 //         );
 //     });
 // }
-
-fn print_subcommand_summary(entries: BTreeMap<NaiveDate, i64>) {
-    let mut sum_hours = 0.0;
-    println!(
-        "{0: >10} | {1: >9} | {2: >8} | {3: >8}",
-        "Date", "Weekday", "Hours", "Minutes"
-    );
-    let mut week_number = 0;
-    entries.iter().for_each(|(key, value)| {
-        let week_number_entry = key.iso_week().week();
-        let weekday = key.weekday();
-        let hours = value / 60;
-        let minutes = value - hours * 60;
-
-        sum_hours += hours as f64 + minutes as f64 / 60.0;
-
-        let needs_new_line = if week_number != week_number_entry {
-            format!("\nWeek {}\n", week_number_entry)
-        } else {
-            "".to_string()
-        };
-
-        println!(
-            "{0}{1: <10} | {2: >9} | {3: >7}h | {4: >7}m",
-            needs_new_line,
-            key,
-            weekday.to_string(),
-            hours,
-            minutes,
-        );
-
-        week_number = week_number_entry;
-    });
-    println!();
-    log::info!("You should have worked at least {}h", entries.len() * 8);
-    log::info!("You have worked {:.2}h", sum_hours);
-}
