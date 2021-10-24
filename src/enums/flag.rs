@@ -3,6 +3,7 @@ use crate::helper::input;
 #[derive(Debug, PartialEq)]
 pub enum Flag {
     Month(String),
+    Decimal,
 }
 
 pub trait ExtractFlags {
@@ -18,28 +19,44 @@ impl ExtractFlags for [String] {
         while n < flags.len() {
             log::info!("{:?}", flags.get(n));
             let flag_key = flags.get(n);
-            let flag_value = flags.get(n + 1);
 
-            let flag = parse_flag(flag_key, flag_value);
+            let flag_option = parse_flag(
+                flag_key,
+                if flag_key.is_some() && flag_key.unwrap() == &"-m".to_string() {
+                    {
+                        flags.get(n + 1)
+                    }
+                } else {
+                    {
+                        None
+                    }
+                },
+            );
 
-            flag_enums.push(flag);
+            if let Some(flag) = flag_option {
+                flag_enums.push(flag)
+            }
 
-            n += 2;
+            n += 1;
         }
 
         flag_enums
     }
 }
 
-fn parse_flag(flag_key: Option<&String>, flag_value: Option<&String>) -> Flag {
+fn parse_flag(flag_key: Option<&String>, flag_value: Option<&String>) -> Option<Flag> {
     match flag_key.as_deref().map(|s| &s[..]) {
-        Some("-m") => validate_month_flag(flag_value.expect("No month provided")),
-        Some(_) => todo!(),
-        None => todo!(),
+        Some("-m") => Option::from(parse_month_flag(flag_value.expect("No month provided"))),
+        Some("-d") => Option::from(Flag::Decimal),
+        Some(val) if val.contains('-') => {
+            panic!("unkown flag");
+        }
+        Some(_) => None,
+        None => todo!("no flag"),
     }
 }
 
-fn validate_month_flag(value: &str) -> Flag {
+fn parse_month_flag(value: &str) -> Flag {
     let is_valid_month = input::is_valid_month(value);
     match is_valid_month {
         true => (Flag::Month(value.to_owned())),

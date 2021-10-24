@@ -1,21 +1,48 @@
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use timeular_cli::enums::flag::{ExtractFlags, Flag};
 
-    // #[test]
-    // fn test_add() {
-    //     assert_eq!(add(2, 2), 4);
-    // }
+    #[test]
+    fn test_month_flag_parsing() {
+        let flags = vec![
+            "".to_string(),
+            "".to_string(),
+            "-m".to_string(),
+            "feb".to_string(),
+        ];
 
-    // #[test]
-    // fn test_add_hundred() {
-    //     assert_eq!(add(100, 2), 102);
-    //     assert_eq!(add(2, 100), 102);
-    // }
+        assert_eq!(flags.extract_flags(), [Flag::Month("feb".to_string())]);
+    }
 
-    // #[test]
-    // #[ignore]
-    // fn ignored_test() {
-    //     assert_eq!(add(0, 0), 0);
-    // }
+    #[test]
+    fn test_month_with_decimal_flag_parsing() {
+        let flags = vec![
+            "".to_string(),
+            "".to_string(),
+            "-m".to_string(),
+            "feb".to_string(),
+            "-d".to_string(),
+        ];
+
+        assert_eq!(
+            flags.extract_flags(),
+            [Flag::Month("feb".to_string()), Flag::Decimal]
+        );
+    }
+
+    #[test]
+    fn test_month_with_decimal_flag_recerse_order_parsing() {
+        let flags = vec![
+            "".to_string(),
+            "".to_string(),
+            "-d".to_string(),
+            "-m".to_string(),
+            "feb".to_string(),
+        ];
+
+        assert_eq!(
+            flags.extract_flags(),
+            [Flag::Decimal, Flag::Month("feb".to_string())]
+        );
+    }
 }

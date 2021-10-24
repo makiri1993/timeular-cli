@@ -34,7 +34,7 @@ pub async fn run() -> Result<(), reqwest::Error> {
         Command::Summary => {
             subcommand_summary(flags, &timeular_service).await?;
         }
-        Command::Entries => todo!(),
+        Command::Entries => todo!("entries command"),
     }
 
     Ok(())
@@ -44,9 +44,7 @@ async fn subcommand_summary(
     flags: &[Flag],
     timeular_service: &TimeularService,
 ) -> Result<(), reqwest::Error> {
-    let month_flag = flags.iter().find(|flag| match flag {
-        Flag::Month(_) => true,
-    });
+    let month_flag = flags.iter().find(|flag| matches!(flag, Flag::Month(_)));
     if let Some(Flag::Month(month)) = month_flag {
         log::info!("Value for input: {}", month);
         // log::info!("Value for dec: {:?}", matches.is_present("decimal"));
