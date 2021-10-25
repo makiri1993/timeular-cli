@@ -18,7 +18,6 @@ pub async fn run() -> Result<(), reqwest::Error> {
     let args: Vec<String> = env::args().collect();
     let command = &args.extract_command();
     let flags = &args.extract_flags();
-    // let flags = extract_flags(&args[2..]);
     log::info!("Flags: {:?}", flags);
 
     let client = reqwest::Client::new();
