@@ -6,7 +6,7 @@ use crate::{
         flag::{ExtractFlags, Flag},
     },
     helper::input,
-    models::{print::PrettyPrint, time::Summarize},
+    models::{print, time::summarize_entries_in_tree},
 };
 
 use std::env;
@@ -45,16 +45,16 @@ async fn subcommand_summary(
     timeular_service: &TimeularService,
 ) -> Result<(), reqwest::Error> {
     let month_flag = flags.iter().find(|flag| matches!(flag, Flag::Month(_)));
+    let decimal_flag = flags.iter().find(|flag| matches!(flag, Flag::Decimal));
     if let Some(Flag::Month(month)) = month_flag {
         log::info!("Value for input: {}", month);
-        // log::info!("Value for dec: {:?}", matches.is_present("decimal"));
         let (start, end) = input::convert_input_month_to_date_strings(month);
         log::info!("{} {}", start, end);
         let entries = timeular_service.get_timeular_entries(start, end).await?;
 
-        let summarized_entries = entries.summarize_entries_in_tree();
+        let summarized_entries = summarize_entries_in_tree(entries);
 
-        summarized_entries.print_subcommand_summary();
+        print::print_subcommand_summary(summarized_entries, decimal_flag.is_some());
     }
     Ok(())
 }

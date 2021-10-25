@@ -8,20 +8,10 @@ pub struct Entry {
     pub duration: Duration,
 }
 
-pub trait Summarize {
-    fn summarize_entries_in_tree(&self) -> BTreeMap<NaiveDate, i64>;
-}
-
-impl Summarize for Vec<Entry> {
-    fn summarize_entries_in_tree(&self) -> BTreeMap<NaiveDate, i64> {
-        let mut tree_map: BTreeMap<NaiveDate, i64> = BTreeMap::new();
-        self.iter().for_each(|activity| {
-            let existing_value = tree_map.get(&activity.date).cloned();
-            tree_map.insert(
-                activity.date,
-                existing_value.unwrap_or(0) + activity.duration.num_minutes(),
-            );
-        });
-        tree_map
-    }
+pub fn summarize_entries_in_tree(entries: Vec<Entry>) -> BTreeMap<NaiveDate, i64> {
+    let mut tree_map: BTreeMap<NaiveDate, i64> = BTreeMap::new();
+    entries.iter().for_each(|entry| {
+        *tree_map.entry(entry.date).or_insert(0) += entry.duration.num_minutes();
+    });
+    tree_map
 }
