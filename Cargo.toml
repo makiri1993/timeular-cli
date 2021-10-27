@@ -2,6 +2,8 @@
 name = "timeular-cli"
 version = "0.1.0"
 authors = ["makiri1993 <kireew.martin@icloud.com>"]
+description = "Tool for using the API of timeular"
+license = "MIT"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
