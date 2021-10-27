@@ -17,9 +17,7 @@ impl ExtractFlags for [String] {
         let mut n = 0;
 
         while n < flags.len() {
-            log::info!("{:?}", flags.get(n));
             let flag_key = flags.get(n);
-
             let flag_option = parse_flag(
                 flag_key,
                 if flag_key.is_some() && flag_key.unwrap() == &"-m".to_string() {

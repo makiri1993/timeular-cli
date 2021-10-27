@@ -1,55 +1,44 @@
-use std::convert::{TryFrom, TryInto};
-
-#[derive(Debug, serde::Deserialize)]
+const CONFIG_NAME: &str = "timeular-cli";
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Settings {
     pub timeular_api_key: String,
     pub timeular_api_secret: String,
 }
 
-pub enum Environment {
-    Local,
-    Production,
-}
-
-impl Environment {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Environment::Local => "local",
-            Environment::Production => "production",
+impl ::std::default::Default for Settings {
+    fn default() -> Self {
+        Self {
+            timeular_api_key: "".into(),
+            timeular_api_secret: "".into(),
         }
     }
 }
 
-impl TryFrom<String> for Environment {
-    type Error = String;
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        match s.to_lowercase().as_str() {
-            "local" => Ok(Self::Local),
-            "production" => Ok(Self::Production),
-            other => Err(format!(
-                "{} is not a supported environment. Use either `local` or `production`.",
-                other
-            )),
-        }
-    }
-}
+pub fn get_config() -> Settings {
+    let configuration: Settings = confy::load(CONFIG_NAME).expect("Failed to read configuration.");
 
-pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    let mut settings = config::Config::default();
-    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
-    let configuration_directory = base_path.join("configuration");
-    // Read the "default" configuration file
-    settings.merge(config::File::from(configuration_directory.join("base")).required(true))?;
-    // Detect the running environment.
-    // Default to `local` if unspecified.
-    let environment: Environment = std::env::var("APP_ENVIRONMENT")
-        .unwrap_or_else(|_| "local".into())
-        .try_into()
-        .expect("Failed to parse APP_ENVIRONMENT.");
-    // Layer on the environment-specific values.
-    settings.merge(
-        config::File::from(configuration_directory.join(environment.as_str())).required(true),
-    )?;
-    // Add in settings from environment variables (with a prefix of APP and '__' as separator) // E.g. `APP_APPLICATION__PORT=5001 would set `Settings.application.port` settings.merge(config::Environment::with_prefix("app").separator("__"))?;
-    settings.try_into()
+    if configuration.timeular_api_key.is_empty() || configuration.timeular_api_secret.is_empty() {
+        let mut timeular_api_key = String::new();
+        let mut timeular_api_secret = String::new();
+        println!("No api key and secret provided.");
+        println!("Please enter the api key");
+        std::io::stdin()
+            .read_line(&mut timeular_api_key)
+            .expect("Failed to read api key");
+
+        println!("Please enter the api secret");
+        std::io::stdin()
+            .read_line(&mut timeular_api_secret)
+            .expect("Failed to read api key");
+
+        let new_configuration = Settings {
+            timeular_api_key: timeular_api_key.trim_end().into(),
+            timeular_api_secret: timeular_api_secret.trim_end().into(),
+        };
+        confy::store(CONFIG_NAME, &new_configuration).expect("error storing api data.");
+
+        return new_configuration;
+    }
+
+    configuration
 }

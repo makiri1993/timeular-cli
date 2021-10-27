@@ -1,6 +1,6 @@
 use crate::{
     api::TimeularService,
-    configuration::get_configuration,
+    configuration::{get_config, Settings},
     enums::{
         command::{Command, ExtractCommand},
         flag::{ExtractFlags, Flag},
@@ -8,11 +8,10 @@ use crate::{
     helper::input,
     models::{print, time::summarize_entries_in_tree},
 };
-
 use std::env;
 
 pub async fn run() -> Result<(), reqwest::Error> {
-    let configuration = get_configuration().expect("Failed to read configuration.");
+    let configuration: Settings = get_config();
     log::info!("Config: {:?}", configuration);
 
     let args: Vec<String> = env::args().collect();
