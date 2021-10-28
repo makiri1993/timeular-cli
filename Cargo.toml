@@ -1,6 +1,6 @@
 [package]
 name = "timeular-cli"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["makiri1993 <kireew.martin@icloud.com>"]
 description = "Tool for using the API of timeular"
 license = "MIT"
