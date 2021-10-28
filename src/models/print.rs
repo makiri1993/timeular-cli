@@ -1,10 +1,12 @@
-use std::collections::BTreeMap;
-
 use chrono::{Datelike, NaiveDate};
+use colored::{ColoredString, Colorize};
+use std::collections::BTreeMap;
 
 pub fn print_subcommand_summary(summary: BTreeMap<NaiveDate, i64>, is_decimal: bool) {
     let mut sum_hours = 0.0;
 
+    println!();
+    println!();
     if is_decimal {
         println!("{0: >10} | {1: >9} | {2: >8}", "Date", "Weekday", "Time");
     } else {
@@ -26,7 +28,10 @@ pub fn print_subcommand_summary(summary: BTreeMap<NaiveDate, i64>, is_decimal: b
             format!("\nWeek {}\n", week_number_entry)
         } else {
             "".to_string()
-        };
+        }
+        .as_str()
+        .yellow()
+        .bold();
 
         if is_decimal {
             print_with_decimals(
@@ -54,7 +59,7 @@ pub fn print_subcommand_summary(summary: BTreeMap<NaiveDate, i64>, is_decimal: b
 }
 
 fn print_with_hours_minutes(
-    week: &str,
+    week: &ColoredString,
     date: &NaiveDate,
     weekday: &str,
     hours: &i64,
