@@ -7,6 +7,7 @@ async fn main() -> Result<(), reqwest::Error> {
 
     let configuration: configuration::Settings = configuration::get_config();
     log::info!("Config: {:?}", configuration);
+
     run(&configuration).await?;
 
     Ok(())
