@@ -1,6 +1,6 @@
 use crate::{
     api::TimeularService,
-    configuration::{get_config, Settings},
+    configuration::Settings,
     enums::{
         command::{Command, ExtractCommand},
         flag::{ExtractFlags, Flag},
@@ -10,10 +10,7 @@ use crate::{
 };
 use std::env;
 
-pub async fn run() -> Result<(), reqwest::Error> {
-    let configuration: Settings = get_config();
-    log::info!("Config: {:?}", configuration);
-
+pub async fn run(configuration: &Settings) -> Result<(), reqwest::Error> {
     let args: Vec<String> = env::args().collect();
     let command = &args.extract_command();
     let flags = &args.extract_flags();
