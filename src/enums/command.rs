@@ -1,6 +1,7 @@
 pub enum Command {
     Summary,
     Entries,
+    Reset,
 }
 
 pub trait ExtractCommand {
@@ -13,6 +14,7 @@ impl ExtractCommand for [String] {
         match command.as_deref().map(|s| &s[..]) {
             Some("summary") => Command::Summary,
             Some("entries") => Command::Entries,
+            Some("reset") => Command::Reset,
             Some(val) => panic!("This command '{}' is not supported.", val),
             None => panic!("No command provided."),
         }

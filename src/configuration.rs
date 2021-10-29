@@ -16,7 +16,7 @@ impl ::std::default::Default for Settings {
 
 pub fn get_config() -> Settings {
     let configuration: Settings = confy::load(CONFIG_NAME).expect("Failed to read configuration.");
-
+    log::info!("load config {:?}", configuration);
     if configuration.timeular_api_key.is_empty() || configuration.timeular_api_secret.is_empty() {
         let mut timeular_api_key = String::new();
         let mut timeular_api_secret = String::new();
@@ -35,10 +35,23 @@ pub fn get_config() -> Settings {
             timeular_api_key: timeular_api_key.trim_end().into(),
             timeular_api_secret: timeular_api_secret.trim_end().into(),
         };
-        confy::store(CONFIG_NAME, &new_configuration).expect("error storing api data.");
-
-        return new_configuration;
+        return match confy::store(CONFIG_NAME, &new_configuration) {
+            Ok(_) => get_config(),
+            Err(_) => panic!("error storing api data."),
+        };
     }
 
     configuration
+}
+
+pub fn reset_config() {
+    confy::store(
+        CONFIG_NAME,
+        Settings {
+            timeular_api_key: "".into(),
+            timeular_api_secret: "".into(),
+        },
+    )
+    .expect("error resetting data.");
+    log::info!("Settings were resetted!");
 }
