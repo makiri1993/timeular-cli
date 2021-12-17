@@ -1,22 +1,21 @@
 [package]
-name = "timeular-cli"
-version = "0.1.1"
 authors = ["makiri1993 <kireew.martin@icloud.com>"]
 description = "Tool for using the API of timeular"
-license = "MIT"
 edition = "2021"
+license = "MIT"
+name = "timeular-cli"
 repository = "https://github.com/makiri1993/timeular-cli"
-
+version = "0.1.2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = { version = "0.4.19", features = ["serde"] }
-clap = { version = "2.33.3" }
-colored = { version = "2" }
+chrono = {version = "0.4.19", features = ["serde"]}
+clap = {version = "2.33.3"}
+colored = {version = "2"}
 confy = "0.4.0"
-log = { version = "0.4.14" }
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0" }
-tokio = { version = "1", features = ["full"] }
+log = {version = "0.4.14"}
+reqwest = {version = "0.11", features = ["json"]}
+serde = {version = "1.0", features = ["derive"]}
+serde_json = {version = "1.0"}
+tokio = {version = "1", features = ["full"]}

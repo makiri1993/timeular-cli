@@ -11,7 +11,7 @@ pub trait ExtractCommand {
 impl ExtractCommand for [String] {
     fn extract_command(&self) -> Command {
         let command = self.get(1);
-        match command.as_deref().map(|s| &s[..]) {
+        match command.map(|s| &s[..]) {
             Some("summary") => Command::Summary,
             Some("entries") => Command::Entries,
             Some("reset") => Command::Reset,

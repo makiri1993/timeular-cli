@@ -43,7 +43,7 @@ impl ExtractFlags for [String] {
 }
 
 fn parse_flag(flag_key: Option<&String>, flag_value: Option<&String>) -> Option<Flag> {
-    match flag_key.as_deref().map(|s| &s[..]) {
+    match flag_key.map(|s| &s[..]) {
         Some("-m") => Option::from(parse_month_flag(flag_value.expect("No month provided"))),
         Some("-d") => Option::from(Flag::Decimal),
         Some(val) if val.contains('-') => {

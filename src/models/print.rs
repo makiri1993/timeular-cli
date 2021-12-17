@@ -32,11 +32,12 @@ pub fn print_subcommand_summary(summary: BTreeMap<NaiveDate, i64>, is_decimal: b
         );
     }
     let mut week_number = 0;
-    summary.iter().for_each(|(date, value)| {
+    summary.iter().for_each(|(date, seconds)| {
+        let value_in_minutes = (seconds.to_owned() as f64 / 60.0).ceil() as i64;
         let week_number_entry = date.iso_week().week();
         let weekday = date.weekday();
-        let hours = value / 60;
-        let minutes = value - hours * 60;
+        let hours = value_in_minutes / 60;
+        let minutes = value_in_minutes - hours * 60;
 
         sum_hours += hours as f64 + minutes as f64 / 60.0;
 

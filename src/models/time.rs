@@ -11,7 +11,7 @@ pub struct Entry {
 pub fn summarize_entries_in_tree(entries: Vec<Entry>) -> BTreeMap<NaiveDate, i64> {
     let mut tree_map: BTreeMap<NaiveDate, i64> = BTreeMap::new();
     entries.iter().for_each(|entry| {
-        *tree_map.entry(entry.date).or_insert(0) += entry.duration.num_minutes();
+        *tree_map.entry(entry.date).or_insert(0) += entry.duration.num_seconds();
     });
     tree_map
 }

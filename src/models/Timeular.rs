@@ -10,22 +10,22 @@ pub struct LoginResponse {
 #[derive(Debug, Deserialize)]
 pub struct ActivitiesResponse {
     pub activities: Vec<Activity>,
-    #[serde(rename(deserialize = "inactiveActivities"))]
-    inactive_activities: Vec<Activity>,
-    #[serde(rename(deserialize = "archivedActivities"))]
-    archived_activities: Vec<Activity>,
+    // #[serde(rename(deserialize = "inactiveActivities"))]
+    // inactive_activities: Vec<Activity>,
+    // #[serde(rename(deserialize = "archivedActivities"))]
+    // archived_activities: Vec<Activity>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Activity {
     pub id: String,
     pub name: String,
-    color: String,
-    integration: String,
-    #[serde(rename(deserialize = "spaceId"))]
-    space_id: String,
-    #[serde(rename(deserialize = "deviceSide"))]
-    device_side: Option<u8>,
+    // color: String,
+    // integration: String,
+    // #[serde(rename(deserialize = "spaceId"))]
+    // space_id: String,
+    // #[serde(rename(deserialize = "deviceSide"))]
+    // device_side: Option<u8>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,11 +36,11 @@ pub struct EntriesResponse {
 
 #[derive(Debug, Deserialize)]
 pub struct Entry {
-    id: String,
+    // id: String,
     #[serde(rename(deserialize = "activityId"))]
     pub activity_id: String,
     pub duration: EntryDuration,
-    note: EntryNote,
+    // note: EntryNote,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,19 +53,19 @@ pub struct EntryDuration {
 
 #[derive(Debug, Deserialize)]
 struct EntryNote {
-    text: Option<String>,
-    tags: Vec<String>,
-    mentions: Vec<EntryNoteMention>,
+    // text: Option<String>,
+// tags: Vec<String>,
+// mentions: Vec<EntryNoteMention>,
 }
 
 #[derive(Debug, Deserialize)]
 struct EntryNoteMention {
-    id: i32,
-    key: String,
-    label: String,
-    scope: String,
-    #[serde(rename(deserialize = "spaceId"))]
-    space_id: String,
+    // id: i32,
+// key: String,
+// label: String,
+// scope: String,
+// #[serde(rename(deserialize = "spaceId"))]
+// space_id: String,
 }
 
 pub trait Convert {
